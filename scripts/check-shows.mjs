@@ -34,7 +34,7 @@ const rows = [];
 const el = (tag) => ({ tag, children: [], textContent: '', appendChild(c) { this.children.push(c); }, classList: { toggle() {} } });
 const list = el('tbody');
 Object.defineProperty(list, 'innerHTML', { set() { list.children.length = 0; } });
-globalThis.document = { getElementById: (id) => (id === 'shows-list' ? list : el('div')), createElement: el, addEventListener() {} };
+globalThis.document = { hidden: false, getElementById: (id) => (id === 'shows-list' ? list : el('div')), createElement: el, addEventListener() {} };
 globalThis.localStorage = { getItem: () => null, setItem() {} };
 globalThis.window = globalThis;
 window.LAUNCHER_CONFIG = { locale: 'en-GB', trakt: { clientId: 'abc', username: 'me', tmdbKey: 'k', country: 'ES' } };
@@ -50,3 +50,4 @@ assert.deepEqual([table[0][0], table[0][1], table[0][3]], ['MobLand', 'S2 E7', '
 assert.deepEqual([table[1][0], table[1][3]], ['Silo', ''], 'no ES provider = empty cell');
 assert.equal(calls.filter((c) => c.includes('/shows/2/')).length, 1, 'watchlist + watched duplicate checked once');
 console.log('shows.js ok', table);
+process.exit(0);   // shows.js keeps a refresh timer running

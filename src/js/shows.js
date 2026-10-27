@@ -3,15 +3,16 @@
  * Trakt app client id and a public profile (config.js `trakt`). Leave either null and the table
  * never appears.
  *
- * Like the weather, there is no polling: it refreshes on start and when the launcher comes back
- * to the foreground, at most once an hour, and the last result is cached for an instant first frame.
+ * Refreshes every 30 seconds while the launcher is on screen, and when it comes back to the
+ * foreground; the last result is cached for an instant first frame.
  */
 (function () {
     'use strict';
 
     var API = 'https://api.trakt.tv';
     var STORE_KEY = 'arn0.shows.v1';
-    var FRESH_MS = 60 * 60 * 1000;
+    // shortcut: ~2 Trakt calls per followed show each time; with 60+ shows this nears Trakt's 1000 calls/5 min, slow it then.
+    var FRESH_MS = 30 * 1000;
     var RECENT_SHOWS = 30;      // one request per show, so only the most recently watched are checked
     var cfg = window.LAUNCHER_CONFIG.trakt || {};
     var lastFetch = 0;
@@ -102,7 +103,7 @@
     }
 
     function refresh() {
-        if (!cfg.clientId || !cfg.username || Date.now() - lastFetch < FRESH_MS) return;
+        if (!cfg.clientId || !cfg.username || Date.now() - lastFetch < FRESH_MS / 2) return;   // half: the 30 s timer must never land just short
         lastFetch = Date.now();
         fetchUpcoming().then(function (items) {
             try { localStorage.setItem(STORE_KEY, JSON.stringify(items)); } catch (e) { /* cache only */ }
@@ -114,6 +115,7 @@
         try { render(JSON.parse(localStorage.getItem(STORE_KEY))); } catch (e) { /* no cache */ }
         refresh();
         document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+        setInterval(function () { if (!document.hidden) refresh(); }, FRESH_MS);
     }
 
     window.Shows = { start: start, render: render };
