@@ -20,14 +20,14 @@ window.LAUNCHER_CONFIG = {
         { id: 'org.tizen.netflix-app', label: 'Netflix' },
         { id: 'org.tizen.primevideo', label: 'Prime Video' },
         { id: 'MCmYXNxgcu.DisneyPlus', label: 'Disney+' },
-        { id: 'com.samsung.tv.aria-video', label: 'Apple TV' }
+        { id: 'com.samsung.tv.aria-video', label: 'Apple TV' },
+        { match: 'movistar', label: 'Movistar Plus+' },
+        { match: 'hbo|^max$', label: 'HBO Max', brand: 'max' },
+        { match: 'stremio', label: 'Stremio' },
+        { match: 'rtve', label: 'RTVE Play' }
     ],
 
-    inputs: [
-        { hdmi: 1, label: 'Nintendo Switch 2', brand: 'switch' },
-        { hdmi: 2, label: 'PlayStation 5', brand: 'playstation' },
-        { hdmi: 4, label: 'Xbox Series X', brand: 'xbox' }
-    ],
+    inputs: [],
 
     // How an input tile switches the TV. See README "HDMI inputs".
     //   'switch+viewer'  set the TV source, then open Samsung's TV viewer (default)
@@ -79,6 +79,17 @@ window.LAUNCHER_CONFIG = {
         move: { freq: 880, ms: 38, type: 'triangle' },
         edge: { freq: 200, ms: 70, type: 'sine' },
         select: { freq: 1320, ms: 55, type: 'triangle' }
+    },
+
+    /*
+     * "Next episodes" table on Home, from Trakt. Create an app at trakt.tv/oauth/applications
+     * (redirect URI http://localhost; it is never used) and copy its Client ID; your profile must be public.
+     * Put both in config.local.js. Null disables the table.
+     */
+    trakt: {
+        clientId: null,
+        username: null,
+        limit: 5
     },
 
     // Development only: where the Lab screen sends its logs (npm run devlog on your computer).

@@ -25,6 +25,8 @@
         app('E0P3lRI4H7.MYTF1', 'TF1+ : Streaming, TV en Direct'),
         app('MovistarPl.MovistarPlus', 'Movistar Plus+'),
         app('PlexMedia0.Plex', 'Plex'),
+        app('HboMaxApp0.HBOMax', 'HBO Max'),
+        app('StremioTv0.Stremio', 'Stremio'),
         app('DaznApp000.DAZN', 'DAZN'),
         app('RtveTvApp0.RTVEPlay', 'RTVE Play'),
         app('Atresplay0.atresplayer', 'atresplayer'),

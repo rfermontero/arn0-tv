@@ -146,6 +146,21 @@ h1, h2 {
 
 #apps-section { top: 350px; }
 #inputs-section { top: 690px; }
+/* shortcut: shares the consoles' slot, so it overlaps them if inputs are configured; move it lower then. */
+#shows-section { top: 690px; }
+
+.shows {
+    border-collapse: collapse;
+    font-size: 28px;
+}
+
+.shows td {
+    padding: 7px 64px 7px 0;
+    white-space: nowrap;
+}
+
+.shows td:first-child { font-weight: 600; }
+.shows td + td { color: var(--muted); }
 
 .shelf h2 {
     margin-bottom: 26px;
