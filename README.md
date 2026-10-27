@@ -69,8 +69,7 @@ under native/. Do not change Home or startup behaviour.
 ```
 
 TV work is different in kind: it needs a machine on the same network as the TV, so an agent that
-can only read this repo cannot operate the TV. This repository includes the guarded helper source,
-but does not include a ready-to-run SDB staging/runner script or a per-TV recovery snapshot.
+can only read this repo cannot operate the TV. The guarded helper source and a working SDB runner live in this repository (`scripts/tv-runner/`); see [docs/home-rollback.md](docs/home-rollback.md) for the recovery steps.
 
 ## Put it on a TV
 

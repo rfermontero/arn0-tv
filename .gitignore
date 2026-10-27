@@ -61,3 +61,7 @@ native-snapshot.json
 .AppleDouble
 .Spotlight-V100
 .Trashes
+
+# Backup y tooling por-TV (no publicar)
+/backup-local/
+/.tools/

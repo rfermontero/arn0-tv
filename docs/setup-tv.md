@@ -146,7 +146,7 @@ Do these in order. Do not skip step 2.
    Test Home from another app. The helper does not change power-on settings; validate cold-start
    behavior separately before claiming it works.
 
-6. **Know your way back.** `Arn0HomeControl restore <baseline.json>` restores all saved Home and
+6. **Know your way back.** Recovery paths for every scenario are documented in [docs/home-rollback.md](home-rollback.md). `Arn0HomeControl restore <baseline.json>` restores all saved Home and
    startup values and prints `ARN0_RESTORED=`. Use the same reviewed runner that ran the query and
    apply operations.
 
