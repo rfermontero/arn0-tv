@@ -43,6 +43,7 @@ const stored = {};
 globalThis.localStorage = { getItem: () => null, setItem(k, v) { stored[k] = v; } };
 globalThis.window = globalThis;
 window.LAUNCHER_CONFIG = { locale: 'es-ES', trakt: { clientId: 'abc', username: 'me', tmdbKey: 'k', country: 'ES' } };
+window.I18n = { t: (text, ...args) => ({ TBA: 'Sin fecha' })[text] || args.reduce((o, v, i) => o.replace('{' + i + '}', v), text) };
 window.DevLog = { log: (m) => rows.push(m), errorText: String };
 
 new Function(readFileSync(new URL('../src/js/shows.js', import.meta.url), 'utf8'))();

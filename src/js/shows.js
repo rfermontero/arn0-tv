@@ -163,7 +163,7 @@
                     art.appendChild(img);
                 }
                 row.appendChild(art);
-                [it.show, it.aired ? code(it) : '', it.aired ? when(it.aired) : 'Sin fecha', it.where || ''].forEach(function (text, i) {
+                [it.show, it.aired ? code(it) : '', it.aired ? when(it.aired) : I18n.t('TBA'), it.where || ''].forEach(function (text, i) {
                     var cell = document.createElement('td');
                     if (!i) cell.className = 'title';
                     cell.textContent = text;
@@ -252,7 +252,7 @@
     function openDay(item) {
         if (!item.eps.length) {
             var day = item.date.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
-            UI.toast(day.charAt(0).toUpperCase() + day.slice(1) + ': sin estrenos');
+            UI.toast(I18n.t('{0}: no episodes', day.charAt(0).toUpperCase() + day.slice(1)));
             return;
         }
         var body = document.getElementById('episode-body');
@@ -303,7 +303,7 @@
             UI.register('episode', {
                 el: document.getElementById('episode'),
                 overlay: true,
-                hints: [['Back', 'Cerrar']],
+                hints: [['Back', 'Close']],
                 rows: function () { return []; }
             });
         }
