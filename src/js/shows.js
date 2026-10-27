@@ -42,7 +42,9 @@
         return request('https://api.themoviedb.org/3/tv/' + show.ids.tmdb + '/watch/providers?api_key=' + encodeURIComponent(cfg.tmdbKey), {})
             .then(function (res) {
                 var here = res.results && res.results[cfg.country || 'ES'];
-                return here && here.flatrate ? here.flatrate.map(function (p) { return p.provider_name; }).join(', ') : '';
+                var names = ((here && here.flatrate) || []).map(function (p) { return p.provider_name.trim(); })
+                    .filter(function (n) { return !/with ads|channel/i.test(n); });   // ad tiers and Amazon channels repeat the same service
+                return names.slice(0, 2).join(', ');
             }, function () { return ''; });
     }
 

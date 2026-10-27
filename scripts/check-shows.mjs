@@ -14,7 +14,7 @@ const routes = {
     [T + '/shows/1/next_episode?extended=full']: { season: 2, number: 7, first_aired: new Date(now + day).toISOString() },
     [T + '/shows/2/next_episode?extended=full']: { season: 4, number: 1, first_aired: new Date(now + 9 * day).toISOString() },
     [T + '/shows/3/next_episode?extended=full']: null,
-    'https://api.themoviedb.org/3/tv/10/watch/providers?api_key=k': { results: { ES: { flatrate: [{ provider_name: 'SkyShowtime' }] } } },
+    'https://api.themoviedb.org/3/tv/10/watch/providers?api_key=k': { results: { ES: { flatrate: [{ provider_name: 'SkyShowtime' }, { provider_name: 'Netflix Standard with Ads' }, { provider_name: 'Apple TV Amazon Channel' }] } } },
     'https://api.themoviedb.org/3/tv/20/watch/providers?api_key=k': { results: { US: {} } }
 };
 
