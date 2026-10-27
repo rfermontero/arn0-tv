@@ -53,8 +53,8 @@
     function followedShows() {
         var user = '/users/' + encodeURIComponent(cfg.username);
         return Promise.all([
-            get(user + '/watchlist/shows'),
-            get(user + '/watched/shows?extended=noseasons')
+            get(user + '/watchlist/shows?extended=full'),
+            get(user + '/watched/shows?extended=full,noseasons')
         ]).then(function (lists) {
             var watched = lists[1].sort(function (a, b) { return a.last_watched_at < b.last_watched_at ? 1 : -1; });
             var seen = {};
@@ -67,14 +67,20 @@
         return followedShows().then(function (shows) {
             return Promise.all(shows.map(function (show) {
                 return get('/shows/' + show.ids.trakt + '/next_episode?extended=full').then(function (ep) {
-                    if (!ep || !ep.first_aired) return null;
+                    // No date yet: still listed, last, while the show is not ended or cancelled.
+                    if (!(ep && ep.first_aired) && !/returning|production|planned|upcoming/.test(show.status)) return null;
                     return providers(show).then(function (where) {
-                        return { show: show.title, season: ep.season, number: ep.number, aired: ep.first_aired, where: where };
+                        return ep && ep.first_aired
+                            ? { show: show.title, season: ep.season, number: ep.number, aired: ep.first_aired, where: where }
+                            : { show: show.title, where: where };
                     });
                 }).then(null, function () { return null; });   // one broken show must not hide the others
             }));
         }).then(function (list) {
-            return list.filter(Boolean).sort(function (a, b) { return a.aired < b.aired ? -1 : 1; });
+            return list.filter(Boolean).sort(function (a, b) {
+                if (!a.aired || !b.aired) return a.aired ? -1 : b.aired ? 1 : 0;
+                return a.aired < b.aired ? -1 : 1;
+            });
         });
     }
 
@@ -88,11 +94,11 @@
         var body = document.getElementById('shows-list');
         var since = Date.now() - 12 * 60 * 60 * 1000;   // a cached episode that already aired drops off
         body.innerHTML = '';
-        (items || []).filter(function (it) { return new Date(it.aired).getTime() > since; })
+        (items || []).filter(function (it) { return !it.aired || new Date(it.aired).getTime() > since; })
             .slice(0, cfg.limit || 5)
             .forEach(function (it) {
                 var row = document.createElement('tr');
-                [it.show, 'S' + it.season + ' E' + it.number, when(it.aired), it.where || ''].forEach(function (text) {
+                [it.show, it.aired ? 'S' + it.season + ' E' + it.number : '', it.aired ? when(it.aired) : 'TBA', it.where || ''].forEach(function (text) {
                     var cell = document.createElement('td');
                     cell.textContent = text;
                     row.appendChild(cell);

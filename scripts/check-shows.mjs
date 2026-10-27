@@ -5,15 +5,17 @@ import assert from 'node:assert/strict';
 const day = 864e5, now = Date.now();
 const T = 'https://api.trakt.tv';
 const routes = {
-    [T + '/users/me/watchlist/shows']: [{ show: { title: 'Silo', ids: { trakt: 2, tmdb: 20 } } }],
-    [T + '/users/me/watched/shows?extended=noseasons']: [
+    [T + '/users/me/watchlist/shows?extended=full']: [{ show: { title: 'Silo', ids: { trakt: 2, tmdb: 20 } } }],
+    [T + '/users/me/watched/shows?extended=full,noseasons']: [
         { last_watched_at: '2026-10-01', show: { title: 'Silo', ids: { trakt: 2, tmdb: 20 } } },
         { last_watched_at: '2026-10-20', show: { title: 'MobLand', ids: { trakt: 1, tmdb: 10 } } },
-        { last_watched_at: '2026-09-01', show: { title: 'Ended', ids: { trakt: 3 } } },
-        { last_watched_at: '2026-09-02', show: { title: 'Broken', ids: { trakt: 4 } } }],
+        { last_watched_at: '2026-09-01', show: { title: 'Ended', status: 'ended', ids: { trakt: 3 } } },
+        { last_watched_at: '2026-09-02', show: { title: 'Broken', ids: { trakt: 4 } } },
+        { last_watched_at: '2026-10-23', show: { title: 'Lupin', status: 'returning series', ids: { trakt: 5 } } }],
     [T + '/shows/1/next_episode?extended=full']: { season: 2, number: 7, first_aired: new Date(now + day).toISOString() },
     [T + '/shows/2/next_episode?extended=full']: { season: 4, number: 1, first_aired: new Date(now + 9 * day).toISOString() },
     [T + '/shows/3/next_episode?extended=full']: null,
+    [T + '/shows/5/next_episode?extended=full']: null,
     'https://api.themoviedb.org/3/tv/10/watch/providers?api_key=k': { results: { ES: { flatrate: [{ provider_name: 'SkyShowtime' }, { provider_name: 'Netflix Standard with Ads' }, { provider_name: 'Apple TV Amazon Channel' }] } } },
     'https://api.themoviedb.org/3/tv/20/watch/providers?api_key=k': { results: { US: {} } }
 };
@@ -45,7 +47,8 @@ window.Shows.start();
 await new Promise((r) => setTimeout(r, 50));
 
 const table = list.children.map((tr) => tr.children.map((td) => td.textContent));
-assert.equal(table.length, 2, 'ended and broken shows are dropped');
+assert.equal(table.length, 3, 'ended and broken shows are dropped');
+assert.deepEqual(table[2], ['Lupin', '', 'TBA', ''], 'returning show without a date goes last');
 assert.deepEqual([table[0][0], table[0][1], table[0][3]], ['MobLand', 'S2 E7', 'SkyShowtime']);
 assert.deepEqual([table[1][0], table[1][3]], ['Silo', ''], 'no ES provider = empty cell');
 assert.equal(calls.filter((c) => c.includes('/shows/2/')).length, 1, 'watchlist + watched duplicate checked once');

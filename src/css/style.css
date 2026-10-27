@@ -147,7 +147,7 @@ h1, h2 {
 #apps-section { top: 350px; }
 #inputs-section { top: 690px; }
 /* shortcut: shares the consoles' slot, so it overlaps them if inputs are configured; move it lower then. */
-#shows-section { top: 690px; }
+#shows-section { top: 676px; }
 
 .shows {
     border-collapse: collapse;
@@ -155,7 +155,7 @@ h1, h2 {
 }
 
 .shows td {
-    padding: 7px 64px 7px 0;
+    padding: 3px 64px 3px 0;
     white-space: nowrap;
 }
 
