@@ -32,6 +32,7 @@
             <div id="shows-section" class="shelf hidden">
                 <h2>Next episodes</h2>
                 <div class="shows-viewport"><table id="shows-table" class="shows"><tbody id="shows-list"></tbody></table></div>
+                <div id="shows-calendar" class="shows-cal hidden"></div>
             </div>
         </section>
 
@@ -147,6 +148,10 @@
                 <div class="dialog-title">Name</div>
                 <input id="rename-input" type="text" maxlength="28" autocomplete="off" spellcheck="false">
             </div>
+        </div>
+
+        <div id="episode" class="view overlay hidden">
+            <div class="menu-box ep-box"><div id="episode-body"></div></div>
         </div>
 
         <div id="menu" class="view overlay hidden">

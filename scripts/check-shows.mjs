@@ -37,7 +37,8 @@ const rows = [];
 const el = (tag) => ({ tag, children: [], textContent: '', offsetHeight: 0, parentNode: { clientHeight: 0, classList: { toggle() {} } }, style: { setProperty() {} }, appendChild(c) { this.children.push(c); }, classList: { toggle() {}, add() {}, remove() {} } });
 const list = el('tbody');
 Object.defineProperty(list, 'innerHTML', { set() { list.children.length = 0; } });
-globalThis.document = { hidden: false, getElementById: (id) => (id === 'shows-list' ? list : el('div')), createElement: el, addEventListener(ev, fn) { listeners[ev] = fn; } };
+const els = {};
+globalThis.document = { hidden: false, querySelector: () => el('div'), getElementById: (id) => (id === 'shows-list' ? list : (els[id] = els[id] || el('div'))), createElement: el, addEventListener(ev, fn) { listeners[ev] = fn; } };
 globalThis.localStorage = { getItem: () => null, setItem() {} };
 globalThis.window = globalThis;
 window.LAUNCHER_CONFIG = { locale: 'en-GB', trakt: { clientId: 'abc', username: 'me', tmdbKey: 'k', country: 'ES' } };
@@ -62,5 +63,17 @@ Date.now = () => realNow() + 60 * 60 * 1000;
 listeners.visibilitychange();
 await new Promise((r) => setTimeout(r, 50));
 assert.equal(list.children[0].children[1].textContent, 'MobLand', 'failed show keeps its last row');
+assert.equal(calls.filter((c) => c.includes('next_episode')).length, 6, 'second refresh only retries the show that failed (5 + Broken)');
+// Calendar: 7 weekday heads + 28 days; tomorrow's MobLand poster sits in tomorrow's cell.
+window.LAUNCHER_CONFIG.trakt.view = 'calendar';
+Date.now = realNow;
+window.Shows.render([{ show: 'MobLand', poster: 'p.jpg', season: 2, number: 7, aired: new Date(realNow() + day).toISOString() },
+    { show: 'NoDate', where: '' }]);
+const cal = els['shows-calendar'].children;
+assert.equal(cal.length, 35);
+const idx = 7 + (new Date().getDay() + 6) % 7 + 1;
+assert.equal(cal[idx].children.length, 2, 'number + poster in tomorrow');
+assert.equal(cal[idx].children[1].src, 'p.jpg');
+assert.equal(cal.filter((c) => c.children.length > 1).length, 1, 'undated show is not placed');
 console.log('shows.js ok', table);
 process.exit(0);   // shows.js keeps a refresh timer running

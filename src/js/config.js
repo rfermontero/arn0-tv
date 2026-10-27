@@ -93,7 +93,8 @@ window.LAUNCHER_CONFIG = {
         username: null,
         tmdbKey: null,
         country: 'ES',
-        limit: 30              // rows beyond what fits scroll slowly
+        limit: 30,             // rows beyond what fits scroll slowly
+        view: 'calendar'       // 'calendar' (next four weeks) or 'list'
     },
 
     // Development only: where the Lab screen sends its logs (npm run devlog on your computer).

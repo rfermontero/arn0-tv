@@ -17,7 +17,10 @@
     var cfg = window.LAUNCHER_CONFIG.trakt || {};
     var lastFetch = 0;
     var shown = null;
-    var known = {};             // last good row per Trakt show id, kept when Trakt rate-limits a refresh           // what is on screen, so an unchanged refresh does not restart the scroll
+    // Per Trakt show id: { at, item }. Next episodes change rarely, so the 30 s refresh only re-reads the
+    // two lists and asks per show again after EPISODE_TTL_MS or once the cached episode has aired.
+    var known = {};
+    var EPISODE_TTL_MS = 6 * 60 * 60 * 1000;           // what is on screen, so an unchanged refresh does not restart the scroll
     var SCROLL_PX_PER_S = 18;
 
     function request(url, headers) {
@@ -75,15 +78,25 @@
         return followedShows().then(function (shows) {
             return Promise.all(shows.map(function (show) {
                 var id = show.ids.trakt;
+                var cached = known[id];
+                var aired = cached && cached.item && cached.item.aired && new Date(cached.item.aired).getTime() < Date.now();
+                if (cached && !aired && Date.now() - cached.at < EPISODE_TTL_MS) return cached.item;
                 return get('/shows/' + id + '/next_episode?extended=full').then(function (ep) {
                     // No date yet: still listed, last, while the show is not ended or cancelled.
-                    if (!(ep && ep.first_aired) && !/returning|production|planned|upcoming/.test(show.status)) return (known[id] = null);
+                    if (!(ep && ep.first_aired) && !/returning|production|planned|upcoming/.test(show.status)) {
+                        known[id] = { at: Date.now(), item: null };
+                        return null;
+                    }
                     return tmdb(show).then(function (extra) {
                         var item = { show: show.title, where: extra.where || '', poster: extra.poster || '' };
-                        if (ep && ep.first_aired) { item.season = ep.season; item.number = ep.number; item.aired = ep.first_aired; }
-                        return (known[id] = item);
+                        if (ep && ep.first_aired) {
+                            item.season = ep.season; item.number = ep.number; item.aired = ep.first_aired;
+                            item.title = ep.title || ''; item.overview = ep.overview || '';
+                        }
+                        known[id] = { at: Date.now(), item: item };
+                        return item;
                     });
-                }).then(null, function () { return known[id] || null; });   // one failed show must not hide the others
+                }).then(null, function () { return cached ? cached.item : null; });   // one failed show must not hide the others
             }));
         }).then(function (list) {
             return list.filter(Boolean).sort(function (a, b) {
@@ -104,9 +117,16 @@
         var since = Date.now() - 12 * 60 * 60 * 1000;   // a cached episode that already aired drops off
         var rows = (items || []).filter(function (it) { return !it.aired || new Date(it.aired).getTime() > since; })
             .slice(0, cfg.limit || 30);
-        var key = JSON.stringify(rows);
+        var calendar = cfg.view === 'calendar';
+        var key = (calendar ? 'cal' : 'list') + new Date().toDateString() + JSON.stringify(rows);   // the date moves "today"
         if (key === shown) return;
         shown = key;
+        document.querySelector('.shows-viewport').classList.toggle('hidden', calendar);
+        document.getElementById('shows-calendar').classList.toggle('hidden', !calendar);
+        if (calendar) {
+            document.getElementById('shows-section').classList.toggle('hidden', !renderCalendar(rows));
+            return;
+        }
         body.innerHTML = '';
         rows.forEach(function (it) {
                 var row = document.createElement('tr');
@@ -128,6 +148,98 @@
             });
         document.getElementById('shows-section').classList.toggle('hidden', !body.children.length);
         scroll();
+    }
+
+    function dayKey(d) {
+        return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    }
+
+    // Four Monday-first weeks from this week; returns how many episodes fell inside them.
+    function renderCalendar(rows) {
+        var cal = document.getElementById('shows-calendar');
+        var byDay = {};
+        rows.forEach(function (it) {
+            if (!it.aired) return;
+            var k = dayKey(new Date(it.aired));
+            (byDay[k] = byDay[k] || []).push(it);
+        });
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var start = new Date(today);
+        start.setDate(today.getDate() - (today.getDay() + 6) % 7);
+        var locale = window.LAUNCHER_CONFIG.locale;
+        var count = 0;
+        cal.innerHTML = '';
+        for (var w = 0; w < 7; w++) {
+            var head = document.createElement('div');
+            var wd = new Date(start);
+            wd.setDate(start.getDate() + w);
+            head.className = 'wd';
+            head.textContent = wd.toLocaleDateString(locale, { weekday: 'short' });
+            cal.appendChild(head);
+        }
+        for (var i = 0; i < 28; i++) {
+            var d = new Date(start);
+            d.setDate(start.getDate() + i);
+            var cell = document.createElement('div');
+            cell.className = 'day' + (d < today ? ' past' : '') + (d.getTime() === today.getTime() ? ' today' : '');
+            var num = document.createElement('div');
+            num.className = 'num';
+            num.textContent = d.getDate() === 1 || i === 0 ? d.toLocaleDateString(locale, { day: 'numeric', month: 'short' }) : d.getDate();
+            cell.appendChild(num);
+            var eps = byDay[dayKey(d)] || [];
+            cell._item = { kind: 'day', date: d, eps: eps };
+            count += eps.length;
+            eps.slice(0, 4).forEach(function (it) {   // shortcut: a fifth show on one day is not shown; widen cells if that happens
+                var mark;
+                if (it.poster) {
+                    mark = document.createElement('img');
+                    mark.src = it.poster;
+                } else {
+                    mark = document.createElement('div');
+                    mark.className = 'name';
+                    mark.textContent = it.show;
+                }
+                cell.appendChild(mark);
+            });
+            cal.appendChild(cell);
+        }
+        if (window.UI && UI.isVisible('home')) UI.refresh();   // the cells were replaced under the focus
+        return count;
+    }
+
+    // Day cells as four rows for remote navigation on Home; nothing while the calendar is off.
+    function rows() {
+        var cal = document.getElementById('shows-calendar');
+        if (cfg.view !== 'calendar' || cal.classList.contains('hidden') ||
+            document.getElementById('shows-section').classList.contains('hidden')) return [];
+        return UI.chunk(UI.children(cal).filter(function (c) { return c._item; }), 7);
+    }
+
+    function openDay(item) {
+        if (!item.eps.length) {
+            UI.toast(item.date.toLocaleDateString(window.LAUNCHER_CONFIG.locale, { weekday: 'long', day: 'numeric', month: 'long' }) + ': no episodes');
+            return;
+        }
+        var body = document.getElementById('episode-body');
+        body.innerHTML = '';
+        item.eps.forEach(function (it) {
+            var row = UI.el('div', 'ep');
+            if (it.poster) {
+                var img = document.createElement('img');
+                img.src = it.poster;
+                row.appendChild(img);
+            }
+            var text = UI.el('div', 'ep-text');
+            text.appendChild(UI.el('div', 'ep-show', it.show));
+            text.appendChild(UI.el('div', 'ep-meta', 'S' + it.season + ' E' + it.number + (it.title ? ' · ' + it.title : '')));
+            text.appendChild(UI.el('div', 'ep-meta', when(it.aired)));
+            if (it.where) text.appendChild(UI.el('div', 'ep-where', it.where));
+            if (it.overview) text.appendChild(UI.el('div', 'ep-overview', it.overview));
+            row.appendChild(text);
+            body.appendChild(row);
+        });
+        UI.show('episode');
     }
 
     function scroll() {
@@ -153,11 +265,19 @@
     }
 
     function start() {
+        if (window.UI) {
+            UI.register('episode', {
+                el: document.getElementById('episode'),
+                overlay: true,
+                hints: [['Back', 'Close']],
+                rows: function () { return []; }
+            });
+        }
         try { render(JSON.parse(localStorage.getItem(STORE_KEY))); } catch (e) { /* no cache */ }
         refresh();
         document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
         setInterval(function () { if (!document.hidden) refresh(); }, FRESH_MS);
     }
 
-    window.Shows = { start: start, render: render };
+    window.Shows = { start: start, render: render, rows: rows, openDay: openDay };
 })();
