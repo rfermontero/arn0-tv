@@ -408,7 +408,7 @@
         UI.register('home', {
             el: $('home'),
             startRow: 1,
-            hints: [['OK', 'Open'], ['▲', 'Settings']],
+            hints: [['OK', 'Abrir'], ['▲', 'Ajustes']],
             rows: function () {
                 return [[$('gear')], UI.children($('apps-row')), UI.children($('inputs-row'))].concat(Shows.rows());
             },

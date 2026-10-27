@@ -10,7 +10,7 @@
     'use strict';
 
     var API = 'https://api.trakt.tv';
-    var STORE_KEY = 'arn0.shows.v2';
+    var STORE_KEY = 'arn0.shows.v3';
     // shortcut: ~2 Trakt calls per followed show each time; with 60+ shows this nears Trakt's 1000 calls/5 min, slow it then.
     var FRESH_MS = 30 * 1000;
     var RECENT_SHOWS = 30;      // one request per show, so only the most recently watched are checked
@@ -44,16 +44,38 @@
     }
 
     // Poster and where the show streams (TMDB's JustWatch data), in one call. Empty without a TMDB key.
+    // The date language from Settings (Appearance), which config.js only defaults.
+    function locale() {
+        return window.Prefs ? Prefs.get().appearance.locale : window.LAUNCHER_CONFIG.locale;
+    }
+
+    // "T2 E7" in Spanish (temporada), "S2 E7" otherwise.
+    function code(it) {
+        return (/^es/.test(locale()) ? 'T' : 'S') + it.season + ' E' + it.number;
+    }
+
+    function tmdbUrl(path) {
+        return 'https://api.themoviedb.org/3' + path + (path.indexOf('?') < 0 ? '?' : '&') +
+            'api_key=' + encodeURIComponent(cfg.tmdbKey) + '&language=' + locale();
+    }
+
+    // Episode title and synopsis in the launcher's language; empty when TMDB has no translation.
+    function tmdbEpisode(show, ep) {
+        if (!cfg.tmdbKey || !show.ids.tmdb) return Promise.resolve({});
+        return request(tmdbUrl('/tv/' + show.ids.tmdb + '/season/' + ep.season + '/episode/' + ep.number), {})
+            .then(null, function () { return {}; });
+    }
+
     function tmdb(show) {
         if (!cfg.tmdbKey || !show.ids.tmdb) return Promise.resolve({});
-        return request('https://api.themoviedb.org/3/tv/' + show.ids.tmdb + '?api_key=' + encodeURIComponent(cfg.tmdbKey) +
-            '&append_to_response=watch%2Fproviders', {})
+        return request(tmdbUrl('/tv/' + show.ids.tmdb + '?append_to_response=watch%2Fproviders'), {})
             .then(function (res) {
                 var all = res['watch/providers'] && res['watch/providers'].results;
                 var here = all && all[cfg.country || 'ES'];
                 var names = ((here && here.flatrate) || []).map(function (p) { return p.provider_name.trim(); })
                     .filter(function (n) { return !/with ads|channel/i.test(n); });   // ad tiers and Amazon channels repeat the same service
                 return {
+                    name: res.name || '',
                     where: names.slice(0, 2).join(', '),
                     poster: res.poster_path ? 'https://image.tmdb.org/t/p/w154' + res.poster_path : ''
                 };
@@ -87,11 +109,14 @@
                         known[id] = { at: Date.now(), item: null };
                         return null;
                     }
-                    return tmdb(show).then(function (extra) {
-                        var item = { show: show.title, where: extra.where || '', poster: extra.poster || '' };
-                        if (ep && ep.first_aired) {
+                    var dated = ep && ep.first_aired;
+                    return Promise.all([tmdb(show), dated ? tmdbEpisode(show, ep) : {}]).then(function (extra) {
+                        var item = { show: extra[0].name || show.title, where: extra[0].where || '', poster: extra[0].poster || '' };
+                        if (dated) {
                             item.season = ep.season; item.number = ep.number; item.aired = ep.first_aired;
-                            item.title = ep.title || ''; item.overview = ep.overview || '';
+                            // TMDB fills untranslated titles with "Episodio 7"; the original title says more.
+                            var name = /^(episodio|episode|épisode) \d+$/i.test(extra[1].name || '') ? '' : extra[1].name;
+                            item.title = name || ep.title || ''; item.overview = extra[1].overview || ep.overview || '';
                         }
                         known[id] = { at: Date.now(), item: item };
                         return item;
@@ -107,7 +132,7 @@
     }
 
     function when(iso) {
-        return new Date(iso).toLocaleString(window.LAUNCHER_CONFIG.locale, {
+        return new Date(iso).toLocaleString(locale(), {
             weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
     }
@@ -138,7 +163,7 @@
                     art.appendChild(img);
                 }
                 row.appendChild(art);
-                [it.show, it.aired ? 'S' + it.season + ' E' + it.number : '', it.aired ? when(it.aired) : 'TBA', it.where || ''].forEach(function (text, i) {
+                [it.show, it.aired ? code(it) : '', it.aired ? when(it.aired) : 'Sin fecha', it.where || ''].forEach(function (text, i) {
                     var cell = document.createElement('td');
                     if (!i) cell.className = 'title';
                     cell.textContent = text;
@@ -167,7 +192,7 @@
         today.setHours(0, 0, 0, 0);
         var start = new Date(today);
         start.setDate(today.getDate() - (today.getDay() + 6) % 7);
-        var locale = window.LAUNCHER_CONFIG.locale;
+        var loc = locale();
         var count = 0;
         cal.innerHTML = '';
         for (var w = 0; w < 7; w++) {
@@ -175,7 +200,7 @@
             var wd = new Date(start);
             wd.setDate(start.getDate() + w);
             head.className = 'wd';
-            head.textContent = wd.toLocaleDateString(locale, { weekday: 'short' });
+            head.textContent = wd.toLocaleDateString(loc, { weekday: 'short' });
             cal.appendChild(head);
         }
         for (var i = 0; i < 28; i++) {
@@ -185,12 +210,14 @@
             cell.className = 'day' + (d < today ? ' past' : '') + (d.getTime() === today.getTime() ? ' today' : '');
             var num = document.createElement('div');
             num.className = 'num';
-            num.textContent = d.getDate() === 1 || i === 0 ? d.toLocaleDateString(locale, { day: 'numeric', month: 'short' }) : d.getDate();
+            num.textContent = d.getDate() === 1 || i === 0 ? d.toLocaleDateString(loc, { day: 'numeric', month: 'short' }) : d.getDate();
             cell.appendChild(num);
             var eps = byDay[dayKey(d)] || [];
             cell._item = { kind: 'day', date: d, eps: eps };
             count += eps.length;
-            eps.slice(0, 4).forEach(function (it) {   // shortcut: a fifth show on one day is not shown; widen cells if that happens
+            // Up to four posters; with more, three and a "+N" so the cell never overflows.
+            var shownEps = eps.length > 4 ? eps.slice(0, 3) : eps;
+            shownEps.forEach(function (it) {
                 var mark;
                 if (it.poster) {
                     mark = document.createElement('img');
@@ -202,6 +229,12 @@
                 }
                 cell.appendChild(mark);
             });
+            if (eps.length > shownEps.length) {
+                var more = document.createElement('div');
+                more.className = 'more';
+                more.textContent = '+' + (eps.length - shownEps.length);
+                cell.appendChild(more);
+            }
             cal.appendChild(cell);
         }
         if (window.UI && UI.isVisible('home')) UI.refresh();   // the cells were replaced under the focus
@@ -218,7 +251,8 @@
 
     function openDay(item) {
         if (!item.eps.length) {
-            UI.toast(item.date.toLocaleDateString(window.LAUNCHER_CONFIG.locale, { weekday: 'long', day: 'numeric', month: 'long' }) + ': no episodes');
+            var day = item.date.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
+            UI.toast(day.charAt(0).toUpperCase() + day.slice(1) + ': sin estrenos');
             return;
         }
         var body = document.getElementById('episode-body');
@@ -232,7 +266,7 @@
             }
             var text = UI.el('div', 'ep-text');
             text.appendChild(UI.el('div', 'ep-show', it.show));
-            text.appendChild(UI.el('div', 'ep-meta', 'S' + it.season + ' E' + it.number + (it.title ? ' · ' + it.title : '')));
+            text.appendChild(UI.el('div', 'ep-meta', code(it) + (it.title ? ' · ' + it.title : '')));
             text.appendChild(UI.el('div', 'ep-meta', when(it.aired)));
             if (it.where) text.appendChild(UI.el('div', 'ep-where', it.where));
             if (it.overview) text.appendChild(UI.el('div', 'ep-overview', it.overview));
@@ -269,7 +303,7 @@
             UI.register('episode', {
                 el: document.getElementById('episode'),
                 overlay: true,
-                hints: [['Back', 'Close']],
+                hints: [['Back', 'Cerrar']],
                 rows: function () { return []; }
             });
         }

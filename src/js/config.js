@@ -35,7 +35,7 @@ window.LAUNCHER_CONFIG = {
     //   'inapp'          show the input full screen inside the launcher (Back returns)
     inputMethod: 'switch+viewer',
 
-    locale: 'en-GB',
+    locale: 'es-ES',
 
     theme: {
         // Starting wallpaper (key from js/wallpapers.js), or null for none (plain gradient).

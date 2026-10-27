@@ -16,8 +16,9 @@ const routes = {
     [T + '/shows/2/next_episode?extended=full']: { season: 4, number: 1, first_aired: new Date(now + 9 * day).toISOString() },
     [T + '/shows/3/next_episode?extended=full']: null,
     [T + '/shows/5/next_episode?extended=full']: null,
-    'https://api.themoviedb.org/3/tv/10?api_key=k&append_to_response=watch%2Fproviders': { poster_path: '/mob.jpg', 'watch/providers': { results: { ES: { flatrate: [{ provider_name: 'SkyShowtime' }, { provider_name: 'Netflix Standard with Ads' }, { provider_name: 'Apple TV Amazon Channel' }] } } } },
-    'https://api.themoviedb.org/3/tv/20?api_key=k&append_to_response=watch%2Fproviders': { poster_path: null, 'watch/providers': { results: { US: {} } } }
+    'https://api.themoviedb.org/3/tv/10?append_to_response=watch%2Fproviders&api_key=k&language=es-ES': { name: 'MobLand ES', poster_path: '/mob.jpg', 'watch/providers': { results: { ES: { flatrate: [{ provider_name: 'SkyShowtime' }, { provider_name: 'Netflix Standard with Ads' }, { provider_name: 'Apple TV Amazon Channel' }] } } } },
+    'https://api.themoviedb.org/3/tv/10/season/2/episode/7?api_key=k&language=es-ES': { name: 'As de picas', overview: 'Sinopsis' },
+    'https://api.themoviedb.org/3/tv/20?append_to_response=watch%2Fproviders&api_key=k&language=es-ES': { poster_path: null, 'watch/providers': { results: { US: {} } } }
 };
 
 const calls = [];
@@ -34,14 +35,14 @@ globalThis.XMLHttpRequest = function () {
     });
 };
 const rows = [];
-const el = (tag) => ({ tag, children: [], textContent: '', offsetHeight: 0, parentNode: { clientHeight: 0, classList: { toggle() {} } }, style: { setProperty() {} }, appendChild(c) { this.children.push(c); }, classList: { toggle() {}, add() {}, remove() {} } });
+const el = (tag) => ({ tag, children: [], set innerHTML(v) { this.children.length = 0; }, textContent: '', offsetHeight: 0, parentNode: { clientHeight: 0, classList: { toggle() {} } }, style: { setProperty() {} }, appendChild(c) { this.children.push(c); }, classList: { toggle() {}, add() {}, remove() {} } });
 const list = el('tbody');
-Object.defineProperty(list, 'innerHTML', { set() { list.children.length = 0; } });
 const els = {};
 globalThis.document = { hidden: false, querySelector: () => el('div'), getElementById: (id) => (id === 'shows-list' ? list : (els[id] = els[id] || el('div'))), createElement: el, addEventListener(ev, fn) { listeners[ev] = fn; } };
-globalThis.localStorage = { getItem: () => null, setItem() {} };
+const stored = {};
+globalThis.localStorage = { getItem: () => null, setItem(k, v) { stored[k] = v; } };
 globalThis.window = globalThis;
-window.LAUNCHER_CONFIG = { locale: 'en-GB', trakt: { clientId: 'abc', username: 'me', tmdbKey: 'k', country: 'ES' } };
+window.LAUNCHER_CONFIG = { locale: 'es-ES', trakt: { clientId: 'abc', username: 'me', tmdbKey: 'k', country: 'ES' } };
 window.DevLog = { log: (m) => rows.push(m), errorText: String };
 
 new Function(readFileSync(new URL('../src/js/shows.js', import.meta.url), 'utf8'))();
@@ -51,9 +52,11 @@ await new Promise((r) => setTimeout(r, 50));
 const posters = list.children.map((tr) => tr.children[0].children.length ? tr.children[0].children[0].src : '');
 const table = list.children.map((tr) => tr.children.slice(1).map((td) => td.textContent));
 assert.deepEqual(posters, ['https://image.tmdb.org/t/p/w154/mob.jpg', '', ''], 'poster only when TMDB has one');
+const mob = JSON.parse(stored['arn0.shows.v3']).find((i) => i.show === 'MobLand ES');
+assert.deepEqual([mob.title, mob.overview], ['As de picas', 'Sinopsis'], 'episode text comes from TMDB in the launcher language');
 assert.equal(table.length, 3, 'ended and broken shows are dropped');
-assert.deepEqual(table[2], ['Lupin', '', 'TBA', ''], 'returning show without a date goes last');
-assert.deepEqual([table[0][0], table[0][1], table[0][3]], ['MobLand', 'S2 E7', 'SkyShowtime']);
+assert.deepEqual(table[2], ['Lupin', '', 'Sin fecha', ''], 'returning show without a date goes last');
+assert.deepEqual([table[0][0], table[0][1], table[0][3]], ['MobLand ES', 'T2 E7', 'SkyShowtime']);
 assert.deepEqual([table[1][0], table[1][3]], ['Silo', ''], 'no ES provider = empty cell');
 assert.equal(calls.filter((c) => c.includes('/shows/2/')).length, 1, 'watchlist + watched duplicate checked once');
 // A later refresh where Trakt fails MobLand keeps its last good row instead of dropping it.
@@ -62,7 +65,7 @@ const realNow = Date.now;
 Date.now = () => realNow() + 60 * 60 * 1000;
 listeners.visibilitychange();
 await new Promise((r) => setTimeout(r, 50));
-assert.equal(list.children[0].children[1].textContent, 'MobLand', 'failed show keeps its last row');
+assert.equal(list.children[0].children[1].textContent, 'MobLand ES', 'failed show keeps its last row');
 assert.equal(calls.filter((c) => c.includes('next_episode')).length, 6, 'second refresh only retries the show that failed (5 + Broken)');
 // Calendar: 7 weekday heads + 28 days; tomorrow's MobLand poster sits in tomorrow's cell.
 window.LAUNCHER_CONFIG.trakt.view = 'calendar';
@@ -75,5 +78,10 @@ const idx = 7 + (new Date().getDay() + 6) % 7 + 1;
 assert.equal(cal[idx].children.length, 2, 'number + poster in tomorrow');
 assert.equal(cal[idx].children[1].src, 'p.jpg');
 assert.equal(cal.filter((c) => c.children.length > 1).length, 1, 'undated show is not placed');
+// Six shows on one day: three posters and "+3".
+const many = [1, 2, 3, 4, 5, 6].map((n) => ({ show: 'S' + n, poster: n + '.jpg', season: 1, number: 1, aired: new Date(realNow() + day).toISOString() }));
+window.Shows.render(many);
+const busy = els['shows-calendar'].children[idx].children;
+assert.deepEqual([busy.length, busy[busy.length - 1].textContent], [5, '+3'], 'number + 3 posters + "+3"');
 console.log('shows.js ok', table);
 process.exit(0);   // shows.js keeps a refresh timer running

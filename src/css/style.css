@@ -224,6 +224,11 @@ h1, h2 {
     object-fit: cover;
 }
 
+.shows-cal .day .more {
+    font-size: 24px;
+    font-weight: 700;
+}
+
 .shows-cal .day .name {
     font-size: 20px;
     line-height: 1.1;
