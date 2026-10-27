@@ -84,5 +84,12 @@ const many = [1, 2, 3, 4, 5, 6].map((n) => ({ show: 'S' + n, poster: n + '.jpg',
 window.Shows.render(many);
 const busy = els['shows-calendar'].children[idx].children;
 assert.deepEqual([busy.length, busy[busy.length - 1].textContent], [5, '+3'], 'number + 3 posters + "+3"');
+// The episode's first installed service opens: TMDB names and app names meet in brands.js.
+new Function(readFileSync(new URL('../src/js/brands.js', import.meta.url), 'utf8'))();
+window.Home = { apps: () => [{ id: 'org.tizen.primevideo', name: 'Prime Video' }, { id: 'm52SXlMi8Y.YOMVITIZEN', name: 'Movistar Plus' }] };
+assert.equal(window.Shows.appFor({ where: 'Atres Player, Movistar Plus+ Ficción Total' }).id, 'm52SXlMi8Y.YOMVITIZEN', 'skips services without an app');
+assert.equal(window.Shows.appFor({ where: 'Amazon Prime Video, Movistar Plus+ Ficción Total' }).id, 'org.tizen.primevideo', 'first service wins');
+assert.equal(window.Shows.appFor({ where: 'Netflix' }), null, 'nothing installed');
+assert.equal(window.Shows.appFor({ where: '' }), null);
 console.log('shows.js ok', table);
 process.exit(0);   // shows.js keeps a refresh timer running

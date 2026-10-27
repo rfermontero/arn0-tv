@@ -16,6 +16,7 @@
             // Home and All apps
             'Next episodes': 'Prochains épisodes',
             'TBA': 'Date à venir',
+            'No installed app for {0}': 'Aucune app installée pour {0}',
             '{0}: no episodes': '{0} : aucun épisode',
             'Apps': 'Apps',
             'Consoles': 'Consoles',
@@ -184,6 +185,7 @@
         'es-ES': {
             'Next episodes': 'Próximos episodios',
             'TBA': 'Sin fecha',
+            'No installed app for {0}': 'No hay ninguna app instalada para {0}',
             '{0}: no episodes': '{0}: sin estrenos',
             'Apps': 'Apps',
             'Consoles': 'Consolas',

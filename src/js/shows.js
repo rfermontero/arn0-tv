@@ -249,6 +249,35 @@
         return UI.chunk(UI.children(cal).filter(function (c) { return c._item; }), 7);
     }
 
+    /*
+     * The installed app for the first service the episode streams on: TMDB's provider name and the
+     * app's own name are matched through the same brand table the tiles use ("Amazon Prime Video"
+     * and the "Prime Video" app both land on primevideo).
+     */
+    function appFor(it) {
+        var services = (it.where || '').split(', ');
+        for (var i = 0; i < services.length; i++) {
+            var brand = services[i] && window.findBrand({ name: services[i] });
+            var app = brand && Home.apps().filter(function (a) {
+                var b = window.findBrand(a);
+                return b && b.key === brand.key;
+            })[0];
+            if (app) return app;
+        }
+        return null;
+    }
+
+    // shortcut: opens the app's home, not the episode; no Tizen-wide deep link format, add per-app ones if wanted.
+    function watch(it) {
+        var app = appFor(it);
+        if (!app) {
+            UI.toast(I18n.t('No installed app for {0}', it.where || it.show));
+            return;
+        }
+        UI.back();
+        Home.launch({ id: app.id, label: app.name });
+    }
+
     function openDay(item) {
         if (!item.eps.length) {
             var day = item.date.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
@@ -259,6 +288,7 @@
         body.innerHTML = '';
         item.eps.forEach(function (it) {
             var row = UI.el('div', 'ep');
+            row._item = it;
             if (it.poster) {
                 var img = document.createElement('img');
                 img.src = it.poster;
@@ -303,8 +333,9 @@
             UI.register('episode', {
                 el: document.getElementById('episode'),
                 overlay: true,
-                hints: [['Back', 'Close']],
-                rows: function () { return []; }
+                hints: [['OK', 'Open'], ['Back', 'Close']],
+                rows: function () { return UI.children(document.getElementById('episode-body')).map(function (r) { return [r]; }); },
+                activate: watch
             });
         }
         try { render(JSON.parse(localStorage.getItem(STORE_KEY))); } catch (e) { /* no cache */ }
@@ -313,5 +344,5 @@
         setInterval(function () { if (!document.hidden) refresh(); }, FRESH_MS);
     }
 
-    window.Shows = { start: start, render: render, rows: rows, openDay: openDay };
+    window.Shows = { start: start, render: render, rows: rows, openDay: openDay, appFor: appFor };
 })();

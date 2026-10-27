@@ -580,6 +580,7 @@
 
     window.Home = {
         init: init,
+        launch: launchApp,
         apps: function () { return state.apps; },
         homeItems: homeItems,
         setHomeItems: setHomeItems,
