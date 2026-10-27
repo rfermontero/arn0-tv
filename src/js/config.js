@@ -24,6 +24,7 @@ window.LAUNCHER_CONFIG = {
         { match: 'movistar', label: 'Movistar Plus+' },
         { match: 'hbo|^max$', label: 'HBO Max', brand: 'max' },
         { match: 'stremio', label: 'Stremio' },
+        { match: 'skyshowtime', label: 'SkyShowtime' },
         { match: 'rtve', label: 'RTVE Play' }
     ],
 

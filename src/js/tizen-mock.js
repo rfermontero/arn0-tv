@@ -27,6 +27,7 @@
         app('PlexMedia0.Plex', 'Plex'),
         app('HboMaxApp0.HBOMax', 'HBO Max'),
         app('StremioTv0.Stremio', 'Stremio'),
+        app('skysh0WTIM.SkyShowtime', 'SkyShowtime'),
         app('DaznApp000.DAZN', 'DAZN'),
         app('RtveTvApp0.RTVEPlay', 'RTVE Play'),
         app('Atresplay0.atresplayer', 'atresplayer'),

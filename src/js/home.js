@@ -85,7 +85,7 @@
         if (item.brand) {
             tile.style.background = item.brand.bg;
             if (item.brand.text) {
-                var word = el('div', 'wordmark', item.brand.text);
+                var word = el('div', 'wordmark' + (item.brand.text.length > 9 ? ' long' : ''), item.brand.text);
                 word.style.color = item.brand.fg;
                 tile.appendChild(word);
             } else {

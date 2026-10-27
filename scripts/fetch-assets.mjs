@@ -3,23 +3,26 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const SI = 'https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/';
+const SI = 'https://cdn.jsdelivr.net/npm/simple-icons@16.36.0/icons/';
+// Removed from Simple Icons after 13.21.0; kept at the last version that had them.
+const SI13 = 'https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/';
 const CBI = 'https://raw.githubusercontent.com/elax46/custom-brand-icons/a53cabf49bf439023a8f33585af30d783bffe51b/icon-svg/';
 
 const marks = {
     netflix: SI + 'netflix.svg',
     youtube: SI + 'youtube.svg',
-    primevideo: SI + 'primevideo.svg',
+    primevideo: SI13 + 'primevideo.svg',
     appletv: SI + 'appletv.svg',
     spotify: SI + 'spotify.svg',
     plex: SI + 'plex.svg',
     twitch: SI + 'twitch.svg',
-    max: SI + 'max.svg',
+    max: SI13 + 'max.svg',
     crunchyroll: SI + 'crunchyroll.svg',
     dazn: SI + 'dazn.svg',
     movistar: SI + 'movistar.svg',
     playstation: SI + 'playstation.svg',
-    nintendoswitch: SI + 'nintendoswitch.svg',
+    nintendoswitch: SI13 + 'nintendoswitch.svg',
+    stremio: SI + 'stremio.svg',
     disneyplus: CBI + 'disney-plus.svg',
     xbox: CBI + 'xbox.svg'
 };

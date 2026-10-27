@@ -388,6 +388,8 @@ h1, h2 {
     letter-spacing: -1px;
 }
 
+.wordmark.long { font-size: 40px; }
+
 .mono {
     position: absolute;
     top: 0;
