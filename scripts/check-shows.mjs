@@ -16,11 +16,12 @@ const routes = {
     [T + '/shows/2/next_episode?extended=full']: { season: 4, number: 1, first_aired: new Date(now + 9 * day).toISOString() },
     [T + '/shows/3/next_episode?extended=full']: null,
     [T + '/shows/5/next_episode?extended=full']: null,
-    'https://api.themoviedb.org/3/tv/10/watch/providers?api_key=k': { results: { ES: { flatrate: [{ provider_name: 'SkyShowtime' }, { provider_name: 'Netflix Standard with Ads' }, { provider_name: 'Apple TV Amazon Channel' }] } } },
-    'https://api.themoviedb.org/3/tv/20/watch/providers?api_key=k': { results: { US: {} } }
+    'https://api.themoviedb.org/3/tv/10?api_key=k&append_to_response=watch%2Fproviders': { poster_path: '/mob.jpg', 'watch/providers': { results: { ES: { flatrate: [{ provider_name: 'SkyShowtime' }, { provider_name: 'Netflix Standard with Ads' }, { provider_name: 'Apple TV Amazon Channel' }] } } } },
+    'https://api.themoviedb.org/3/tv/20?api_key=k&append_to_response=watch%2Fproviders': { poster_path: null, 'watch/providers': { results: { US: {} } } }
 };
 
 const calls = [];
+const listeners = {};
 globalThis.XMLHttpRequest = function () {
     let url;
     this.open = (m, u) => { url = u; calls.push(u); };
@@ -33,10 +34,10 @@ globalThis.XMLHttpRequest = function () {
     });
 };
 const rows = [];
-const el = (tag) => ({ tag, children: [], textContent: '', appendChild(c) { this.children.push(c); }, classList: { toggle() {} } });
+const el = (tag) => ({ tag, children: [], textContent: '', offsetHeight: 0, parentNode: { clientHeight: 0, classList: { toggle() {} } }, style: { setProperty() {} }, appendChild(c) { this.children.push(c); }, classList: { toggle() {}, add() {}, remove() {} } });
 const list = el('tbody');
 Object.defineProperty(list, 'innerHTML', { set() { list.children.length = 0; } });
-globalThis.document = { hidden: false, getElementById: (id) => (id === 'shows-list' ? list : el('div')), createElement: el, addEventListener() {} };
+globalThis.document = { hidden: false, getElementById: (id) => (id === 'shows-list' ? list : el('div')), createElement: el, addEventListener(ev, fn) { listeners[ev] = fn; } };
 globalThis.localStorage = { getItem: () => null, setItem() {} };
 globalThis.window = globalThis;
 window.LAUNCHER_CONFIG = { locale: 'en-GB', trakt: { clientId: 'abc', username: 'me', tmdbKey: 'k', country: 'ES' } };
@@ -46,11 +47,20 @@ new Function(readFileSync(new URL('../src/js/shows.js', import.meta.url), 'utf8'
 window.Shows.start();
 await new Promise((r) => setTimeout(r, 50));
 
-const table = list.children.map((tr) => tr.children.map((td) => td.textContent));
+const posters = list.children.map((tr) => tr.children[0].children.length ? tr.children[0].children[0].src : '');
+const table = list.children.map((tr) => tr.children.slice(1).map((td) => td.textContent));
+assert.deepEqual(posters, ['https://image.tmdb.org/t/p/w154/mob.jpg', '', ''], 'poster only when TMDB has one');
 assert.equal(table.length, 3, 'ended and broken shows are dropped');
 assert.deepEqual(table[2], ['Lupin', '', 'TBA', ''], 'returning show without a date goes last');
 assert.deepEqual([table[0][0], table[0][1], table[0][3]], ['MobLand', 'S2 E7', 'SkyShowtime']);
 assert.deepEqual([table[1][0], table[1][3]], ['Silo', ''], 'no ES provider = empty cell');
 assert.equal(calls.filter((c) => c.includes('/shows/2/')).length, 1, 'watchlist + watched duplicate checked once');
+// A later refresh where Trakt fails MobLand keeps its last good row instead of dropping it.
+delete routes[T + '/shows/1/next_episode?extended=full'];
+const realNow = Date.now;
+Date.now = () => realNow() + 60 * 60 * 1000;
+listeners.visibilitychange();
+await new Promise((r) => setTimeout(r, 50));
+assert.equal(list.children[0].children[1].textContent, 'MobLand', 'failed show keeps its last row');
 console.log('shows.js ok', table);
 process.exit(0);   // shows.js keeps a refresh timer running

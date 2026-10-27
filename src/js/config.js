@@ -93,7 +93,7 @@ window.LAUNCHER_CONFIG = {
         username: null,
         tmdbKey: null,
         country: 'ES',
-        limit: 5
+        limit: 30              // rows beyond what fits scroll slowly
     },
 
     // Development only: where the Lab screen sends its logs (npm run devlog on your computer).

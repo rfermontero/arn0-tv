@@ -144,23 +144,65 @@ h1, h2 {
     right: 0;
 }
 
-#apps-section { top: 350px; }
+#apps-section { top: 330px; }
 #inputs-section { top: 690px; }
 /* shortcut: shares the consoles' slot, so it overlaps them if inputs are configured; move it lower then. */
-#shows-section { top: 676px; }
+#shows-section { top: 628px; }
+
+/* Under three rows with posters; a longer list scrolls (see Shows.render). */
+.shows-viewport {
+    height: 300px;
+    overflow: hidden;
+}
+
+/* Rows fade out at the edges instead of being cut, only while the list scrolls. */
+.shows-viewport.overflowing {
+    -webkit-mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent);
+}
+
+/* Hold at the top, glide to the end, hold, then back: --shift and duration are set from JS. */
+@keyframes shows-scroll {
+    0%, 12% { transform: translateY(0); }
+    88%, 100% { transform: translateY(var(--shift)); }
+}
+
+.shows.scrolling {
+    animation: shows-scroll linear infinite alternate;
+}
 
 .shows {
     border-collapse: collapse;
-    font-size: 28px;
+    font-size: 32px;
 }
 
 .shows td {
-    padding: 3px 64px 3px 0;
+    padding: 6px 56px 6px 0;
     white-space: nowrap;
+    vertical-align: middle;
 }
 
-.shows td:first-child { font-weight: 600; }
-.shows td + td { color: var(--muted); }
+.shows td.poster {
+    width: 64px;
+    padding-right: 30px;
+}
+
+.shows td.poster img {
+    display: block;
+    width: 64px;
+    height: 96px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.shows td.title {
+    max-width: 560px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 38px;
+    font-weight: 600;
+}
+.shows td + td + td { color: var(--muted); }
 
 .shelf h2 {
     margin-bottom: 26px;
