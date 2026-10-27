@@ -1,5 +1,5 @@
 /*
- * Next episodes of the shows you watch, from Trakt. Read-only and without a login: it needs a
+ * Next episodes of the shows you follow (watchlist + recently watched), from Trakt. Read-only and without a login: it needs a
  * Trakt app client id and a public profile (config.js `trakt`). Leave either null and the table
  * never appears.
  *
@@ -16,31 +16,59 @@
     var cfg = window.LAUNCHER_CONFIG.trakt || {};
     var lastFetch = 0;
 
-    function get(path) {
+    function request(url, headers) {
         return new Promise(function (resolve, reject) {
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', API + path, true);
+            xhr.open('GET', url, true);
             xhr.timeout = 10000;
-            xhr.setRequestHeader('trakt-api-version', '2');
-            xhr.setRequestHeader('trakt-api-key', cfg.clientId);
+            Object.keys(headers).forEach(function (k) { xhr.setRequestHeader(k, headers[k]); });
             xhr.onload = function () {
                 if (xhr.status === 204) resolve(null);
                 else if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
-                else reject(new Error('Trakt ' + xhr.status + ' on ' + path));
+                else reject(new Error(xhr.status + ' on ' + url.split('?')[0]));
             };
-            xhr.onerror = xhr.ontimeout = function () { reject(new Error('Trakt unreachable')); };
+            xhr.onerror = xhr.ontimeout = function () { reject(new Error('unreachable: ' + url.split('?')[0])); };
             xhr.send();
         });
     }
 
+    function get(path) {
+        return request(API + path, { 'trakt-api-version': '2', 'trakt-api-key': cfg.clientId });
+    }
+
+    // Where the show streams (TMDB's JustWatch data), e.g. "Netflix". Empty without a TMDB key.
+    function providers(show) {
+        if (!cfg.tmdbKey || !show.ids.tmdb) return Promise.resolve('');
+        return request('https://api.themoviedb.org/3/tv/' + show.ids.tmdb + '/watch/providers?api_key=' + encodeURIComponent(cfg.tmdbKey), {})
+            .then(function (res) {
+                var here = res.results && res.results[cfg.country || 'ES'];
+                return here && here.flatrate ? here.flatrate.map(function (p) { return p.provider_name; }).join(', ') : '';
+            }, function () { return ''; });
+    }
+
+    // Shows followed = the watchlist plus the most recently watched, without duplicates.
+    function followedShows() {
+        var user = '/users/' + encodeURIComponent(cfg.username);
+        return Promise.all([
+            get(user + '/watchlist/shows'),
+            get(user + '/watched/shows?extended=noseasons')
+        ]).then(function (lists) {
+            var watched = lists[1].sort(function (a, b) { return a.last_watched_at < b.last_watched_at ? 1 : -1; });
+            var seen = {};
+            return lists[0].slice(0, RECENT_SHOWS).concat(watched.slice(0, RECENT_SHOWS)).map(function (w) { return w.show; })
+                .filter(function (show) { return !seen[show.ids.trakt] && (seen[show.ids.trakt] = true); });
+        });
+    }
+
     function fetchUpcoming() {
-        var user = encodeURIComponent(cfg.username);
-        return get('/users/' + user + '/watched/shows?extended=noseasons').then(function (watched) {
-            watched.sort(function (a, b) { return a.last_watched_at < b.last_watched_at ? 1 : -1; });
-            return Promise.all(watched.slice(0, RECENT_SHOWS).map(function (w) {
-                return get('/shows/' + w.show.ids.trakt + '/next_episode?extended=full').then(function (ep) {
-                    return ep && ep.first_aired ? { show: w.show.title, season: ep.season, number: ep.number, aired: ep.first_aired } : null;
-                }, function () { return null; });   // one broken show must not hide the others
+        return followedShows().then(function (shows) {
+            return Promise.all(shows.map(function (show) {
+                return get('/shows/' + show.ids.trakt + '/next_episode?extended=full').then(function (ep) {
+                    if (!ep || !ep.first_aired) return null;
+                    return providers(show).then(function (where) {
+                        return { show: show.title, season: ep.season, number: ep.number, aired: ep.first_aired, where: where };
+                    });
+                }).then(null, function () { return null; });   // one broken show must not hide the others
             }));
         }).then(function (list) {
             return list.filter(Boolean).sort(function (a, b) { return a.aired < b.aired ? -1 : 1; });
@@ -61,7 +89,7 @@
             .slice(0, cfg.limit || 5)
             .forEach(function (it) {
                 var row = document.createElement('tr');
-                [it.show, 'S' + it.season + ' E' + it.number, when(it.aired)].forEach(function (text) {
+                [it.show, 'S' + it.season + ' E' + it.number, when(it.aired), it.where || ''].forEach(function (text) {
                     var cell = document.createElement('td');
                     cell.textContent = text;
                     row.appendChild(cell);

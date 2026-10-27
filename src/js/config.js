@@ -85,10 +85,14 @@ window.LAUNCHER_CONFIG = {
      * "Next episodes" table on Home, from Trakt. Create an app at trakt.tv/oauth/applications
      * (redirect URI http://localhost; it is never used) and copy its Client ID; your profile must be public.
      * Put both in config.local.js. Null disables the table.
+     * Optional tmdbKey (themoviedb.org, Settings > API, "API Key") adds where each show streams
+     * in `country`.
      */
     trakt: {
         clientId: null,
         username: null,
+        tmdbKey: null,
+        country: 'ES',
         limit: 5
     },
 
